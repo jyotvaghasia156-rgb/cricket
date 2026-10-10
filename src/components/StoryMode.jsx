@@ -44,6 +44,11 @@ export const StoryMode = ({ onBackToMenu }) => {
   const [activeSubtitleIndex, setActiveSubtitleIndex] = useState(0);
   const [isPlayingCutscene, setIsPlayingCutscene] = useState(true);
   
+  // Real delivery & running state
+  const [ballFlightProgress, setBallFlightProgress] = useState(null);
+  const [ballZ, setBallZ] = useState(null);
+  const [runningDecision, setRunningDecision] = useState(null);
+
   // Game Feel states
   const [impactEffect, setImpactEffect] = useState(null); // 'six', 'four', 'wicket'
   const [shotFeedback, setShotFeedback] = useState(null); // { score, type }
@@ -120,8 +125,22 @@ export const StoryMode = ({ onBackToMenu }) => {
     } else if (event.type === 'wicket_impact') {
       setImpactEffect('wicket');
       setTimeout(() => setImpactEffect(null), 1500);
+    } else if (event.type === 'ball_delivered') {
+      setIsBallInPlay(true);
+      setRunningDecision(null);
+    } else if (event.type === 'ball_flight') {
+      setBallFlightProgress(event.progress);
+      setBallZ(event.ballZ);
+    } else if (event.type === 'running_decision') {
+      setRunningDecision({
+        possibleRuns: event.possibleRuns,
+        shotType: event.shotType
+      });
     } else if (event.type === 'shot_complete') {
       setIsBallInPlay(false);
+      setBallFlightProgress(null);
+      setBallZ(null);
+      setRunningDecision(null);
       const runs = event.runs;
       
       const nextRuns = statsRef.current.runs + runs;
@@ -138,11 +157,14 @@ export const StoryMode = ({ onBackToMenu }) => {
       }
       else if (runs === 4) addCommentary(`🏏 FOUR! Exquisite timing along the carpet! (+4)`);
       else if (runs > 0) addCommentary(`⚡ Quick single taken! (+${runs})`);
-      else addCommentary(`Dot ball! Straight to the fielder.`);
+      else addCommentary(`Dot ball! Played safely.`);
 
       checkWinCondition(nextRuns, nextBalls, statsRef.current.wickets);
     } else if (event.type === 'wicket') {
       setIsBallInPlay(false);
+      setBallFlightProgress(null);
+      setBallZ(null);
+      setRunningDecision(null);
       
       const nextWickets = statsRef.current.wickets + 1;
       const nextBalls = statsRef.current.balls + 1;
@@ -156,6 +178,9 @@ export const StoryMode = ({ onBackToMenu }) => {
       addCommentary(`🚨 ${event.message}`);
     } else if (event.type === 'dot_ball') {
       setIsBallInPlay(false);
+      setBallFlightProgress(null);
+      setBallZ(null);
+      setRunningDecision(null);
       
       const nextBalls = statsRef.current.balls + 1;
       statsRef.current.balls = nextBalls;
@@ -165,6 +190,13 @@ export const StoryMode = ({ onBackToMenu }) => {
       
       addCommentary(`Dot ball: Beaten by pace outside off.`);
     }
+  };
+
+  const handleConfirmRun = (shouldRun, potentialRuns) => {
+    if (engineRef.current) {
+      engineRef.current.confirmRunningChoice(shouldRun, potentialRuns);
+    }
+    setRunningDecision(null);
   };
 
   const addCommentary = (msg) => {
@@ -751,6 +783,10 @@ export const StoryMode = ({ onBackToMenu }) => {
             cameraView={cameraView}
             onChangeCamera={handleChangeCamera}
             shotFeedback={shotFeedback}
+            ballFlightProgress={ballFlightProgress}
+            ballZ={ballZ}
+            runningDecision={runningDecision}
+            onConfirmRun={handleConfirmRun}
           />
         </>
       )}

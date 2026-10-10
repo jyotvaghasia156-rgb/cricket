@@ -2,29 +2,47 @@ import React, { useState, useEffect } from 'react';
 import { audio } from '../utils/audio';
 import { Shield, Zap, Flame, Wind, Activity, Target, Disc, Move } from 'lucide-react';
 
-export const RealCricketControlsOverlay = ({ onPlayShot, isBallInPlay, cameraView, onChangeCamera, shotFeedback }) => {
+export const RealCricketControlsOverlay = ({
+  onPlayShot,
+  isBallInPlay,
+  cameraView,
+  onChangeCamera,
+  shotFeedback,
+  ballFlightProgress = null,
+  ballZ = null,
+  runningDecision = null,
+  onConfirmRun = () => {}
+}) => {
   const [timingVal, setTimingVal] = useState(50);
   const [selectedDirection, setSelectedDirection] = useState('cover_drive');
   const [isLofted, setIsLofted] = useState(true); // Loft vs Ground Push
   const [footwork, setFootwork] = useState('front_foot'); // 'front_foot', 'back_foot', 'advance'
   const [activeShotFlash, setActiveShotFlash] = useState(false);
+  const [hasHitThisBall, setHasHitThisBall] = useState(false);
 
-  // 8 Directions around the pitch
-  const directions = [
-    { id: 'cover_drive', label: 'Cover', angle: -45, keyHint: 'C / 1' },
-    { id: 'straight_drive', label: 'Straight', angle: 0, keyHint: 'S / 2' },
-    { id: 'flick', label: 'Mid-Wicket', angle: 45, keyHint: 'F / 4' },
-    { id: 'pull', label: 'Square Leg', angle: 90, keyHint: 'P / 3' },
-    { id: 'defend', label: 'Block', angle: 180, keyHint: 'D / 6' },
-    { id: 'lofted_six', label: 'Lofted Six', angle: -10, keyHint: 'Space / 5' }
-  ];
-
-  // Oscillating timing needle
+  // Reset hit lock when bowler starts new delivery
   useEffect(() => {
+    if (!isBallInPlay) {
+      setHasHitThisBall(false);
+    }
+  }, [isBallInPlay]);
+
+  // Synchronize timing gauge with incoming ball trajectory when in play
+  useEffect(() => {
+    if (ballFlightProgress !== null && isBallInPlay) {
+      // Map ball flight directly to timing gauge
+      setTimingVal(ballFlightProgress);
+    }
+  }, [ballFlightProgress, isBallInPlay]);
+
+  // Oscillating idle timing needle when awaiting bowler
+  useEffect(() => {
+    if (isBallInPlay) return; // Freeze oscillation when real ball is in flight
+
     let animId;
     let dir = 1;
     let pos = 50;
-    const speed = 2.6;
+    const speed = 2.4;
 
     const loop = () => {
       pos += dir * speed;
@@ -41,18 +59,28 @@ export const RealCricketControlsOverlay = ({ onPlayShot, isBallInPlay, cameraVie
 
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, []);
+  }, [isBallInPlay]);
 
   const handleExecuteShot = (shotOverride) => {
+    if (hasHitThisBall) return; // Prevent spamming! One shot per delivery!
+    setHasHitThisBall(true);
+
     audio.playClick();
     setActiveShotFlash(true);
     setTimeout(() => setActiveShotFlash(false), 300);
 
     const shotType = shotOverride || (isLofted ? (selectedDirection === 'defend' ? 'defend' : 'lofted_six') : selectedDirection);
 
-    const distFromCenter = Math.abs(timingVal - 50);
-    let timingScore = 1.0 - (distFromCenter / 50);
-    timingScore = Math.max(0.2, timingScore);
+    // If ball is in play, calculate timing relative to sweetspot (ballZ around -8.2 or timingVal around 75%)
+    // Bowler release is z=10, sweetspot is z=-8.2, crease is z=-10.0
+    let timingScore = 0.5;
+    if (ballZ !== null && isBallInPlay) {
+      const distFromSweetSpot = Math.abs(ballZ - (-8.2));
+      timingScore = Math.max(0.15, 1.0 - (distFromSweetSpot / 3.2));
+    } else {
+      const distFromCenter = Math.abs(timingVal - 50);
+      timingScore = Math.max(0.2, 1.0 - (distFromCenter / 50));
+    }
 
     onPlayShot(shotType, timingScore, {
       direction: selectedDirection,
@@ -324,12 +352,95 @@ export const RealCricketControlsOverlay = ({ onPlayShot, isBallInPlay, cameraVie
               </div>
             </div>
 
-            <div style={{ marginTop: 14, fontSize: 11, color: '#94A3B8', textAlign: 'center', background: 'rgba(0,0,0,0.3)', padding: 8, borderRadius: 8 }}>
-              💡 <strong>PRO TIP:</strong> Watch the <strong>Sweetspot Needle Gauge</strong> at top center. Hit when needle enters the green central zone for Maximum Distance & Perfect Timing!
-            </div>
+      {/* RUNNING DECISION CALL BANNER: Choice to run or stay */}
+      {runningDecision && (
+        <div style={{
+          position: 'absolute',
+          top: '38%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          background: 'rgba(7, 11, 25, 0.96)',
+          backdropFilter: 'blur(20px)',
+          border: '2px solid #FCD34D',
+          borderRadius: 20,
+          padding: '16px 28px',
+          boxShadow: '0 0 45px rgba(245, 158, 11, 0.75)',
+          zIndex: 60,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 12,
+          animation: 'timingFadeInOut 0.3s ease-out'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Zap size={22} color="#FCD34D" />
+            <span style={{ fontSize: 18, fontWeight: 900, fontFamily: 'Rajdhani', color: '#FCD34D', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              TAKE RUN CALL? ({runningDecision.possibleRuns} RUN{runningDecision.possibleRuns > 1 ? 'S' : ''} POSSIBLE)
+            </span>
+          </div>
+
+          <div style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', maxWidth: 320 }}>
+            Ball pushed into the outfield. Will you risk taking the run or play safe?
+          </div>
+
+          <div style={{ display: 'flex', gap: 14, width: '100%', marginTop: 4 }}>
+            {/* YES: RUN */}
+            <button
+              onClick={() => {
+                audio.playClick();
+                onConfirmRun(true, runningDecision.possibleRuns);
+              }}
+              style={{
+                flex: 1,
+                padding: '10px 18px',
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                border: '2px solid #34D399',
+                color: '#FFFFFF',
+                fontFamily: 'Rajdhani',
+                fontSize: 16,
+                fontWeight: 900,
+                cursor: 'pointer',
+                boxShadow: '0 0 20px rgba(16, 185, 129, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6
+              }}
+            >
+              🏃 RUN! (+{runningDecision.possibleRuns})
+            </button>
+
+            {/* NO: DECLINE */}
+            <button
+              onClick={() => {
+                audio.playClick();
+                onConfirmRun(false, 0);
+              }}
+              style={{
+                flex: 1,
+                padding: '10px 18px',
+                borderRadius: 12,
+                background: 'rgba(239, 68, 68, 0.25)',
+                border: '2px solid #EF4444',
+                color: '#FCA5A5',
+                fontFamily: 'Rajdhani',
+                fontSize: 15,
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6
+              }}
+            >
+              ✋ STAY (NO RUN)
+            </button>
           </div>
         </div>
       )}
+
+      {/* 3. Controls Help Modal */}
 
       <div style={{
         position: 'absolute',

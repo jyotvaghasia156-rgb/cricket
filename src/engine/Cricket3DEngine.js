@@ -562,7 +562,7 @@ export class Cricket3DEngine {
     this.onEvent({
       type: 'bat_impact',
       isSix,
-      isFour: finalScore > 0.8 && !isSix,
+      isFour: finalScore > 0.78 && !isSix,
       timingScore: finalScore,
       shotType
     });
@@ -570,19 +570,41 @@ export class Cricket3DEngine {
     setTimeout(() => {
       let runs = 0;
       if (isSix) runs = 6;
-      else if (finalScore > 0.8) runs = 4;
-      else if (finalScore > 0.55) runs = 2;
-      else if (finalScore > 0.3) runs = 1;
+      else if (finalScore > 0.78) runs = 4;
+      else if (finalScore > 0.52) runs = 2;
+      else if (finalScore > 0.28) runs = 1;
 
-      this.onEvent({
-        type: 'shot_complete',
-        runs,
-        shotType,
-        timingScore: finalScore
-      });
+      // If shot is a boundary (4 or 6) or a block (0 runs), auto-complete without running decision
+      if (runs === 4 || runs === 6 || runs === 0) {
+        this.onEvent({
+          type: 'shot_complete',
+          runs,
+          shotType,
+          timingScore: finalScore
+        });
+        this.scheduleNextDelivery(2.2);
+      } else {
+        // Safe ground stroke: Offer player choice to RUN or DECLINE RUN!
+        this.onEvent({
+          type: 'running_decision',
+          possibleRuns: runs,
+          shotType,
+          timingScore: finalScore
+        });
+      }
+    }, 1600);
+  }
 
-      this.scheduleNextDelivery(2.2);
-    }, 1800);
+  // Called when player confirms or declines taking runs
+  confirmRunningChoice(shouldRun, potentialRuns = 1) {
+    const runsAwarded = shouldRun ? potentialRuns : 0;
+    this.onEvent({
+      type: 'shot_complete',
+      runs: runsAwarded,
+      shotType: this.currentShot || 'cover_drive',
+      timingScore: this.shotTimingScore
+    });
+    this.scheduleNextDelivery(1.8);
   }
 
   triggerBowledDismissal() {
@@ -667,6 +689,16 @@ export class Cricket3DEngine {
 
       this.ball.position.copy(this.ballPos);
       this.updateTrail(this.ballPos);
+
+      // Emit ball flight progress for dynamic timing bar HUD
+      // Release is at z = 10, Batsman sweetspot is at z = -8.2
+      // Normalize progress from 0% (bowler release) to 100% (past batsman)
+      const flightProgress = Math.max(0, Math.min(100, ((10.0 - this.ballPos.z) / 19.0) * 100));
+      this.onEvent({
+        type: 'ball_flight',
+        progress: flightProgress,
+        ballZ: this.ballPos.z
+      });
 
       if (this.shotActiveTimer > 0 && !this.hasHitBall && this.ballPos.z < -5.5 && this.ballPos.z > -9.8) {
         this.executeBatContact(this.currentShot || 'cover_drive', this.shotTimingScore, this.currentShotOptions);

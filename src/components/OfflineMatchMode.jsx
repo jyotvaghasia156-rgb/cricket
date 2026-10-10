@@ -42,6 +42,9 @@ export const OfflineMatchMode = ({ onBackToMenu }) => {
   const [isBallInPlay, setIsBallInPlay] = useState(false);
   const [cameraView, setCameraView] = useState('behind');
   const [isMuted, setIsMuted] = useState(false);
+  const [ballFlightProgress, setBallFlightProgress] = useState(null);
+  const [ballZ, setBallZ] = useState(null);
+  const [runningDecision, setRunningDecision] = useState(null);
 
   const containerRef = useRef(null);
   const cricket3DRef = useRef(null);
@@ -117,18 +120,33 @@ export const OfflineMatchMode = ({ onBackToMenu }) => {
 
     if (event.type === 'ball_delivered') {
       setIsBallInPlay(true);
+      setRunningDecision(null);
+    } else if (event.type === 'ball_flight') {
+      setBallFlightProgress(event.progress);
+      setBallZ(event.ballZ);
+    } else if (event.type === 'running_decision') {
+      setRunningDecision({
+        possibleRuns: event.possibleRuns,
+        shotType: event.shotType
+      });
     } else if (event.type === 'shot_complete') {
       setIsBallInPlay(false);
+      setBallFlightProgress(null);
+      setBallZ(null);
+      setRunningDecision(null);
       engine.processBallOutcome({
         runs: event.runs,
         isWicket: false,
         desc: event.runs === 6
           ? `SIX! Virat Kohli smashes it out of the stadium!`
-          : (event.runs === 4 ? `FOUR! Exquisite cover drive by Virat!` : `Virat works it away for ${event.runs} run(s).`)
+          : (event.runs === 4 ? `FOUR! Exquisite placement by Virat!` : (event.runs > 0 ? `Virat runs hard for ${event.runs} run(s).` : `Dot ball: Virat declined the run.`))
       });
       refreshMatch();
     } else if (event.type === 'wicket') {
       setIsBallInPlay(false);
+      setBallFlightProgress(null);
+      setBallZ(null);
+      setRunningDecision(null);
       engine.processBallOutcome({
         runs: 0,
         isWicket: true,
@@ -137,6 +155,9 @@ export const OfflineMatchMode = ({ onBackToMenu }) => {
       refreshMatch();
     } else if (event.type === 'dot_ball') {
       setIsBallInPlay(false);
+      setBallFlightProgress(null);
+      setBallZ(null);
+      setRunningDecision(null);
       engine.processBallOutcome({
         runs: 0,
         isWicket: false,
@@ -144,6 +165,13 @@ export const OfflineMatchMode = ({ onBackToMenu }) => {
       });
       refreshMatch();
     }
+  };
+
+  const handleConfirmRun = (shouldRun, potentialRuns) => {
+    if (cricket3DRef.current) {
+      cricket3DRef.current.confirmRunningChoice(shouldRun, potentialRuns);
+    }
+    setRunningDecision(null);
   };
 
   const refreshMatch = () => {
@@ -649,20 +677,25 @@ export const OfflineMatchMode = ({ onBackToMenu }) => {
 
           {matchState.isUserOnStrike && (
             <>
+              {/* Bowl Button (Neatly placed near top right under scorecard, no longer blocking bottom controls) */}
               <div style={{
                 position: 'absolute',
-                bottom: 155,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                zIndex: 15
+                top: 86,
+                right: 310,
+                zIndex: 25
               }}>
                 <button
                   className="btn-gold"
                   disabled={isBallInPlay}
                   onClick={handleBowlNextBall}
-                  style={{ padding: '12px 28px', fontSize: 16, boxShadow: '0 0 25px rgba(245, 158, 11, 0.6)' }}
+                  style={{
+                    padding: '8px 18px',
+                    fontSize: 13,
+                    boxShadow: '0 0 20px rgba(245, 158, 11, 0.5)',
+                    opacity: isBallInPlay ? 0.6 : 1
+                  }}
                 >
-                  <Play size={18} fill="#0F172A" /> FORCE BOWL NOW (YOU ARE ON STRIKE)
+                  <Play size={15} fill="#0F172A" /> {isBallInPlay ? 'BALL IN PLAY...' : 'BOWLER RUN UP'}
                 </button>
               </div>
 
@@ -679,6 +712,10 @@ export const OfflineMatchMode = ({ onBackToMenu }) => {
                   setCameraView(cam);
                   if (cricket3DRef.current) cricket3DRef.current.setCameraView(cam, true);
                 }}
+                ballFlightProgress={ballFlightProgress}
+                ballZ={ballZ}
+                runningDecision={runningDecision}
+                onConfirmRun={handleConfirmRun}
               />
             </>
           )}

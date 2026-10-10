@@ -15,6 +15,9 @@ export const PracticeNetsMode = ({ onBackToMenu }) => {
   const [cameraView, setCameraView] = useState('behind');
   const [isMuted, setIsMuted] = useState(false);
   const [lastShotTelemetry, setLastShotTelemetry] = useState(null);
+  const [ballFlightProgress, setBallFlightProgress] = useState(null);
+  const [ballZ, setBallZ] = useState(null);
+  const [runningDecision, setRunningDecision] = useState(null);
   const [recentLog, setRecentLog] = useState(['Welcome to Training Academy Nets: Select shot or press shortcut keys [C], [S], [P], [F], [Space]']);
 
   const containerRef = useRef(null);
@@ -38,9 +41,21 @@ export const PracticeNetsMode = ({ onBackToMenu }) => {
   const handleEngineEvent = (event) => {
     if (event.type === 'ball_delivered') {
       setIsBallInPlay(true);
+      setRunningDecision(null);
       addLog(`Bowler delivers at ${event.speed} km/h!`);
+    } else if (event.type === 'ball_flight') {
+      setBallFlightProgress(event.progress);
+      setBallZ(event.ballZ);
+    } else if (event.type === 'running_decision') {
+      setRunningDecision({
+        possibleRuns: event.possibleRuns,
+        shotType: event.shotType
+      });
     } else if (event.type === 'shot_complete') {
       setIsBallInPlay(false);
+      setBallFlightProgress(null);
+      setBallZ(null);
+      setRunningDecision(null);
       const r = event.runs;
       setRuns(prev => prev + r);
       setBalls(prev => prev + 1);
@@ -71,13 +86,26 @@ export const PracticeNetsMode = ({ onBackToMenu }) => {
       }
     } else if (event.type === 'wicket') {
       setIsBallInPlay(false);
+      setBallFlightProgress(null);
+      setBallZ(null);
+      setRunningDecision(null);
       setBalls(prev => prev + 1);
       addLog(`🚨 ${event.message}`);
     } else if (event.type === 'dot_ball') {
       setIsBallInPlay(false);
+      setBallFlightProgress(null);
+      setBallZ(null);
+      setRunningDecision(null);
       setBalls(prev => prev + 1);
       addLog(`Beaten by line and length.`);
     }
+  };
+
+  const handleConfirmRun = (shouldRun, potentialRuns) => {
+    if (engineRef.current) {
+      engineRef.current.confirmRunningChoice(shouldRun, potentialRuns);
+    }
+    setRunningDecision(null);
   };
 
   const addLog = (text) => {
@@ -283,6 +311,10 @@ export const PracticeNetsMode = ({ onBackToMenu }) => {
           setCameraView(cam);
           if (engineRef.current) engineRef.current.setCameraView(cam, true);
         }}
+        ballFlightProgress={ballFlightProgress}
+        ballZ={ballZ}
+        runningDecision={runningDecision}
+        onConfirmRun={handleConfirmRun}
       />
     </div>
   );
