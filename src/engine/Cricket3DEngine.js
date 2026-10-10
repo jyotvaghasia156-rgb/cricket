@@ -55,6 +55,8 @@ export class Cricket3DEngine {
     this.hasHitBall = false;
     this.batsmanTappingTime = 0;
     this.footworkMode = 'front_foot';
+    this.pendingRunningDecision = null;
+    this.runningDecisionDetails = null;
 
     // Bowler animation state
     this.bowlerProgress = 0;
@@ -392,6 +394,9 @@ export class Cricket3DEngine {
     this.trailPoints = [];
     this.hasHitBall = false;
     this.currentShot = null;
+    this.pendingRunningDecision = null;
+    this.runningDecisionDetails = null;
+    this.isRunningBetweenWickets = false;
 
     let bounceZ = -3.5;
     if (length === 'full') bounceZ = -6.2;
@@ -530,6 +535,7 @@ export class Cricket3DEngine {
 
       // If shot is a boundary (4 or 6) or a block (0 runs), auto-complete without running decision
       if (runs === 4 || runs === 6 || runs === 0) {
+        this.pendingRunningDecision = null;
         this.onEvent({
           type: 'shot_complete',
           runs,
@@ -539,6 +545,12 @@ export class Cricket3DEngine {
         this.scheduleNextDelivery(2.2);
       } else {
         // Safe ground stroke: Offer player choice to RUN or DECLINE RUN!
+        // Preserve the shot details for the running decision
+        this.pendingRunningDecision = {
+          runs,
+          shotType,
+          timingScore: finalScore
+        };
         this.onEvent({
           type: 'running_decision',
           possibleRuns: runs,
@@ -551,6 +563,13 @@ export class Cricket3DEngine {
 
   // Called when player confirms or declines taking runs
   confirmRunningChoice(shouldRun, potentialRuns = 1) {
+    // Accept each running decision only once!
+    if (!this.pendingRunningDecision) return;
+    const decision = this.pendingRunningDecision;
+    this.pendingRunningDecision = null; // Mark consumed immediately so duplicate triggers are ignored
+
+    const runsToTake = (potentialRuns !== undefined && potentialRuns !== null) ? potentialRuns : decision.runs;
+
     if (!shouldRun) {
       this.onEvent({
         type: 'partner_call',
@@ -559,8 +578,8 @@ export class Cricket3DEngine {
       this.onEvent({
         type: 'shot_complete',
         runs: 0,
-        shotType: this.currentShot || 'cover_drive',
-        timingScore: this.shotTimingScore
+        shotType: decision.shotType,
+        timingScore: decision.timingScore
       });
       this.scheduleNextDelivery(1.8);
       return;
@@ -569,13 +588,14 @@ export class Cricket3DEngine {
     // Active Running Sequence between wickets: Striker and Non-Striker sprint together!
     this.isRunningBetweenWickets = true;
     this.runningProgress = 0;
-    this.runningTotalRuns = potentialRuns;
+    this.runningTotalRuns = runsToTake;
     this.currentRunIndex = 1;
+    this.runningDecisionDetails = decision; // Preserve shot details for when running completes!
 
     audio.playCrowdCheer(0.6);
     this.onEvent({
       type: 'partner_call',
-      message: potentialRuns > 1
+      message: runsToTake > 1
         ? 'YES! TWO THERE! Rohit: "Turn blind, two on! Come on Virat!"'
         : 'YES! RUN! Rohit: "Easy single, keep rotating the strike!"'
     });
@@ -657,11 +677,17 @@ export class Cricket3DEngine {
             this.nonStriker.position.y = 0;
           }
 
+          const shotDetails = this.runningDecisionDetails || {
+            shotType: 'cover_drive',
+            timingScore: 0.8
+          };
+          this.runningDecisionDetails = null;
+
           this.onEvent({
             type: 'shot_complete',
             runs: this.runningTotalRuns,
-            shotType: this.currentShot || 'cover_drive',
-            timingScore: this.shotTimingScore
+            shotType: shotDetails.shotType,
+            timingScore: shotDetails.timingScore
           });
           this.scheduleNextDelivery(1.8);
         }

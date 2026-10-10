@@ -62,8 +62,11 @@ export const RealCricketControlsOverlay = ({
   }, [isBallInPlay]);
 
   const handleExecuteShot = (shotOverride) => {
-    if (hasHitThisBall) return; // Prevent spamming! One shot per delivery!
-    setHasHitThisBall(true);
+    // Do not consume the shot lock before an eligible delivery
+    if (isBallInPlay) {
+      if (hasHitThisBall) return; // Prevent spamming! One shot per delivery!
+      setHasHitThisBall(true);
+    }
 
     audio.playClick();
     setActiveShotFlash(true);
