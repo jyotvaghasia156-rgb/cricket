@@ -63,8 +63,8 @@ export const MainMenu = ({ onSelectMode }) => {
     },
     {
       id: 'offline',
-      title: 'OFFLINE MATCH',
-      subtitle: 'Exhibition & Tournament (AI Co-Op Engine)',
+      title: 'QUICK MATCH',
+      subtitle: 'Instant 3D Match & Chase (AI Co-Op Engine)',
       desc: 'Bat as Virat Kohli in 3D. Teammates & opponents simulated by AI with captaincy controls.',
       badge: 'MATCH MODE',
       color: '#F59E0B',

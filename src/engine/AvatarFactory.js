@@ -197,19 +197,155 @@ export class AvatarFactory {
   }
 
   // Create Opponent Bowlers with Unique Authentic Facial Models
-  static createBowlerModel(bowlerName = 'Haris Rauf') {
+  // Create Realistic Human Face Group
+  static createHumanFaceGroup({
+    skinColor = 0xC68B59,
+    eyeColor = 0x1E1B18,
+    hairColor = 0x1A1412,
+    hasBeard = false,
+    hasMustache = false,
+    hairStyle = 'short', // 'short', 'fade', 'curls', 'bald'
+    hasHelmet = true,
+    capColor = 0x0F172A
+  } = {}) {
+    const headGroup = new THREE.Group();
+    headGroup.position.set(0, 1.58, 0);
+
+    const skinMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.55 });
+    const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xF8FAFC });
+    const pupilMat = new THREE.MeshBasicMaterial({ color: eyeColor });
+    const glareMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+    const hairMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.85 });
+    const lipMat = new THREE.MeshStandardMaterial({ color: 0x9E5A44, roughness: 0.65 });
+
+    // 1. Realistic Cranium & Jawline
+    const headGeo = new THREE.SphereGeometry(0.135, 24, 24);
+    headGeo.scale(1, 1.15, 0.98);
+    const headMesh = new THREE.Mesh(headGeo, skinMat);
+    headMesh.castShadow = true;
+    headGroup.add(headMesh);
+
+    // 2. Ears
+    [-0.136, 0.136].forEach(x => {
+      const ear = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.009, 8, 12), skinMat);
+      ear.position.set(x, 0.01, 0.01);
+      ear.rotation.y = Math.PI / 2;
+      headGroup.add(ear);
+    });
+
+    // 3. Realistic 3D Nose with Bridge & Nostrils
+    const noseBridge = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.058, 0.032), skinMat);
+    noseBridge.position.set(0, 0.01, 0.132);
+    headGroup.add(noseBridge);
+
+    const noseTip = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.032, 8), skinMat);
+    noseTip.rotation.x = Math.PI / 2;
+    noseTip.position.set(0, -0.018, 0.144);
+    headGroup.add(noseTip);
+
+    // 4. Detailed Human Eyes (Sclera white, iris, pupil glare, 3D eyebrows)
+    [-0.045, 0.045].forEach(x => {
+      const eyeWhite = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.013, 0.01), eyeWhiteMat);
+      eyeWhite.position.set(x, 0.022, 0.128);
+      headGroup.add(eyeWhite);
+
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.007, 8, 8), pupilMat);
+      pupil.position.set(x, 0.022, 0.133);
+      headGroup.add(pupil);
+
+      const glare = new THREE.Mesh(new THREE.SphereGeometry(0.002, 6, 6), glareMat);
+      glare.position.set(x + 0.002, 0.025, 0.138);
+      headGroup.add(glare);
+
+      // Brow Ridge / Eyebrow
+      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.008, 0.012), hairMat);
+      brow.position.set(x, 0.04, 0.131);
+      brow.rotation.z = (x < 0 ? -0.1 : 0.1);
+      headGroup.add(brow);
+    });
+
+    // 5. Mouth & Lips
+    const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.012, 0.01), lipMat);
+    mouth.position.set(0, -0.044, 0.13);
+    headGroup.add(mouth);
+
+    // 6. Facial Hair (Beard / Mustache / Goatee)
+    if (hasBeard) {
+      const beardGeo = new THREE.SphereGeometry(0.136, 16, 16);
+      beardGeo.scale(1.015, 0.78, 1.02);
+      const beard = new THREE.Mesh(beardGeo, hairMat);
+      beard.position.set(0, -0.042, 0.012);
+      headGroup.add(beard);
+    }
+    if (hasMustache || hasBeard) {
+      const stache = new THREE.Mesh(new THREE.BoxGeometry(0.048, 0.012, 0.015), hairMat);
+      stache.position.set(0, -0.03, 0.133);
+      headGroup.add(stache);
+    }
+
+    // 7. Hair
+    if (hairStyle !== 'bald') {
+      const hairGeo = new THREE.SphereGeometry(0.138, 18, 18);
+      hairGeo.scale(1.02, 0.58, 1.02);
+      const hair = new THREE.Mesh(hairGeo, hairMat);
+      hair.position.set(0, 0.075, -0.01);
+      headGroup.add(hair);
+    }
+
+    // 8. Open Grille Helmet or Cap (Face remains completely visible)
+    if (hasHelmet) {
+      const helmetMat = new THREE.MeshStandardMaterial({ color: capColor, roughness: 0.35, metalness: 0.2 });
+      const helmetShell = new THREE.Mesh(
+        new THREE.SphereGeometry(0.152, 18, 18, 0, Math.PI * 2, 0, Math.PI * 0.62),
+        helmetMat
+      );
+      helmetShell.position.set(0, 0.04, -0.02);
+      headGroup.add(helmetShell);
+
+      // Open steel grille visor (Eyes and face are clearly visible through the thin grille)
+      const grille = new THREE.Mesh(
+        new THREE.TorusGeometry(0.125, 0.006, 6, 18, Math.PI),
+        new THREE.MeshStandardMaterial({ color: 0xCBD5E1, metalness: 0.95 })
+      );
+      grille.rotation.x = Math.PI / 2;
+      grille.position.set(0, -0.042, 0.105);
+      headGroup.add(grille);
+    } else {
+      // Cricket Cap with peak
+      const capMat = new THREE.MeshStandardMaterial({ color: capColor, roughness: 0.6 });
+      const capTop = new THREE.Mesh(
+        new THREE.SphereGeometry(0.142, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.5),
+        capMat
+      );
+      capTop.position.set(0, 0.06, -0.01);
+      headGroup.add(capTop);
+
+      const capPeak = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.012, 0.08), capMat);
+      capPeak.position.set(0, 0.06, 0.14);
+      headGroup.add(capPeak);
+    }
+
+    return headGroup;
+  }
+
+  // Create Opponent Bowlers with Unique Authentic Human Facial Models
+  static createBowlerModel(bowlerName = 'Haris Rauf', kitColor = 0x047857) {
     const group = new THREE.Group();
     group.position.set(-0.4, 0, 18);
 
-    const skinMat = new THREE.MeshStandardMaterial({ color: 0xC68B59, roughness: 0.55 });
-    
-    // Kit color based on bowler/team
-    let kitColor = 0x047857; // Default Green (Pak)
-    if (bowlerName.includes('Johnson') || bowlerName.includes('Starc')) kitColor = 0xF59E0B; // Aus Gold
-    if (bowlerName.includes('Anderson') || bowlerName.includes('Broad')) kitColor = 0x0284C7; // Eng Blue
-    if (bowlerName.includes('Malinga')) kitColor = 0x1D4ED8; // SL Blue
+    if (bowlerName.includes('Johnson') || bowlerName.includes('Starc') || bowlerName.includes('Cummins')) kitColor = 0xF59E0B;
+    if (bowlerName.includes('Anderson') || bowlerName.includes('Broad') || bowlerName.includes('Archer')) kitColor = 0x0284C7;
+    if (bowlerName.includes('Malinga')) kitColor = 0x1D4ED8;
 
     const jerseyMat = new THREE.MeshStandardMaterial({ color: kitColor, roughness: 0.45 });
+
+    // Lower Body / Legs
+    [-0.14, 0.14].forEach(x => {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.65, 10), jerseyMat);
+      leg.position.set(x, 0.35, 0);
+      leg.castShadow = true;
+      group.add(leg);
+    });
 
     // Body
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.6, 0.24), jerseyMat);
@@ -217,59 +353,17 @@ export class AvatarFactory {
     body.castShadow = true;
     group.add(body);
 
-    // Head & Face
-    const headGroup = new THREE.Group();
-    headGroup.position.set(0, 1.6, 0);
-
-    const face = new THREE.Mesh(new THREE.SphereGeometry(0.132, 20, 20), skinMat);
-    face.castShadow = true;
-    headGroup.add(face);
-
-    // Nose & Eyes
-    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.04, 8), skinMat);
-    nose.rotation.x = Math.PI / 2;
-    nose.position.set(0, 0, 0.135);
-    headGroup.add(nose);
-
-    [-0.042, 0.042].forEach(x => {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.011, 8, 8), new THREE.MeshBasicMaterial({ color: 0x1E1B18 }));
-      eye.position.set(x, 0.02, 0.125);
-      headGroup.add(eye);
+    // Detailed Human Face
+    const isBlonde = bowlerName.includes('Starc') || bowlerName.includes('Johnson') || bowlerName.includes('Anderson');
+    const headGroup = AvatarFactory.createHumanFaceGroup({
+      skinColor: isBlonde ? 0xE8BA99 : 0xC68B59,
+      eyeColor: isBlonde ? 0x2563EB : 0x1E1B18,
+      hairColor: bowlerName.includes('Malinga') ? 0xD97706 : (isBlonde ? 0x92663A : 0x1A1412),
+      hasBeard: !bowlerName.includes('Malinga'),
+      hasMustache: bowlerName.includes('Johnson') || bowlerName.includes('Rauf'),
+      hasHelmet: false,
+      capColor: kitColor
     });
-
-    // Custom Facial Details per Bowler
-    if (bowlerName.includes('Malinga')) {
-      // Blonde curly hair ringlets
-      const hairMat = new THREE.MeshStandardMaterial({ color: 0xD97706, roughness: 0.85 });
-      const curls = new THREE.Mesh(new THREE.TorusGeometry(0.138, 0.038, 8, 16), hairMat);
-      curls.position.set(0, 0.05, 0);
-      headGroup.add(curls);
-
-      // Gold chain necklace
-      const chain = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.008, 6, 16), new THREE.MeshStandardMaterial({ color: 0xF59E0B, metalness: 0.9 }));
-      chain.rotation.x = Math.PI / 2.5;
-      chain.position.set(0, -0.12, 0.02);
-      headGroup.add(chain);
-    } else if (bowlerName.includes('Johnson')) {
-      // Iconic Mitchell Johnson Handlebar Mustache & Aggressive Brow
-      const stacheMat = new THREE.MeshStandardMaterial({ color: 0x1F1915, roughness: 0.9 });
-      const stache = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.008, 6, 12, Math.PI), stacheMat);
-      stache.rotation.z = Math.PI;
-      stache.position.set(0, -0.032, 0.132);
-      headGroup.add(stache);
-
-      const hairMat = new THREE.MeshStandardMaterial({ color: 0x1F1915, roughness: 0.8 });
-      const hair = new THREE.Mesh(new THREE.SphereGeometry(0.136, 16, 16), hairMat);
-      hair.position.set(0, 0.06, -0.01);
-      headGroup.add(hair);
-    } else {
-      // Standard Bowler Hairstyle & Beard
-      const hairMat = new THREE.MeshStandardMaterial({ color: 0x1A1412, roughness: 0.8 });
-      const hair = new THREE.Mesh(new THREE.SphereGeometry(0.136, 16, 16), hairMat);
-      hair.position.set(0, 0.06, -0.01);
-      headGroup.add(hair);
-    }
-
     group.add(headGroup);
 
     // Bowling Arm
@@ -281,6 +375,88 @@ export class AvatarFactory {
     group.add(bowlingArm);
     group.userData.bowlingArm = bowlingArm;
 
+    return group;
+  }
+
+  // Create High-Fidelity Human Fielder
+  static createFielderModel(jerseyColor = 0x047857, fielderIndex = 0) {
+    const group = new THREE.Group();
+    const jerseyMat = new THREE.MeshStandardMaterial({ color: jerseyColor, roughness: 0.5 });
+
+    // Body & Legs
+    [-0.12, 0.12].forEach(x => {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.055, 0.62, 8), jerseyMat);
+      leg.position.set(x, 0.32, 0);
+      leg.castShadow = true;
+      group.add(leg);
+    });
+
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.56, 0.22), jerseyMat);
+    body.position.y = 1.12;
+    body.castShadow = true;
+    group.add(body);
+
+    // Human Head with Cap
+    const headGroup = AvatarFactory.createHumanFaceGroup({
+      skinColor: (fielderIndex % 2 === 0) ? 0xC68B59 : 0xD29A6E,
+      eyeColor: 0x1E1B18,
+      hairColor: 0x1A1412,
+      hasBeard: (fielderIndex % 3 === 0),
+      hasMustache: (fielderIndex % 2 === 0),
+      hasHelmet: false,
+      capColor: jerseyColor
+    });
+    group.add(headGroup);
+
+    return group;
+  }
+
+  // Create Realistic Non-Striker Partner
+  static createNonStrikerModel(partnerName = 'Rohit Sharma', jerseyColor = 0x1E3A8A) {
+    const group = new THREE.Group();
+    group.position.set(-0.4, 0, 9.2);
+
+    const jerseyMat = new THREE.MeshStandardMaterial({ color: jerseyColor, roughness: 0.45 });
+    const padsMat = new THREE.MeshStandardMaterial({ color: 0x0284C7, roughness: 0.5 });
+
+    // Legs with Pads
+    [-0.16, 0.16].forEach(x => {
+      const upperLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.065, 0.42, 10), jerseyMat);
+      upperLeg.position.set(x, 0.64, 0);
+      group.add(upperLeg);
+
+      const pad = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.5, 0.15), padsMat);
+      pad.position.set(x, 0.27, 0.02);
+      pad.castShadow = true;
+      group.add(pad);
+    });
+
+    // Torso
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.58, 0.26), jerseyMat);
+    torso.position.set(0, 1.15, 0);
+    torso.castShadow = true;
+    group.add(torso);
+
+    // Realistic Human Face for Partner
+    const headGroup = AvatarFactory.createHumanFaceGroup({
+      skinColor: 0xC68B59,
+      eyeColor: 0x1E1B18,
+      hairColor: 0x15100E,
+      hasBeard: true,
+      hasMustache: true,
+      hasHelmet: true,
+      capColor: 0x0F172A
+    });
+    group.add(headGroup);
+
+    // Bat held at non-striker crease
+    const batGroup = new THREE.Group();
+    batGroup.position.set(0.2, 0.4, 0.1);
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.58, 0.038), new THREE.MeshStandardMaterial({ color: 0xDEB887 }));
+    batGroup.add(blade);
+    group.add(batGroup);
+
+    group.rotation.y = Math.PI / 2.3;
     return group;
   }
 }

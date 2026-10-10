@@ -18,6 +18,7 @@ export const PracticeNetsMode = ({ onBackToMenu }) => {
   const [ballFlightProgress, setBallFlightProgress] = useState(null);
   const [ballZ, setBallZ] = useState(null);
   const [runningDecision, setRunningDecision] = useState(null);
+  const [shotFeedback, setShotFeedback] = useState(null);
   const [recentLog, setRecentLog] = useState(['Welcome to Training Academy Nets: Select shot or press shortcut keys [C], [S], [P], [F], [Space]']);
 
   const containerRef = useRef(null);
@@ -51,6 +52,14 @@ export const PracticeNetsMode = ({ onBackToMenu }) => {
         possibleRuns: event.possibleRuns,
         shotType: event.shotType
       });
+    } else if (event.type === 'bat_impact') {
+      setShotFeedback({
+        score: event.timingScore,
+        type: event.shotType,
+        isSix: event.isSix,
+        isFour: event.isFour
+      });
+      setTimeout(() => setShotFeedback(null), 2500);
     } else if (event.type === 'shot_complete') {
       setIsBallInPlay(false);
       setBallFlightProgress(null);
@@ -311,6 +320,7 @@ export const PracticeNetsMode = ({ onBackToMenu }) => {
           setCameraView(cam);
           if (engineRef.current) engineRef.current.setCameraView(cam, true);
         }}
+        shotFeedback={shotFeedback}
         ballFlightProgress={ballFlightProgress}
         ballZ={ballZ}
         runningDecision={runningDecision}

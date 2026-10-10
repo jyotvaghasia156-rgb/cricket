@@ -299,33 +299,9 @@ export class Cricket3DEngine {
     this.scene.add(this.batsman);
   }
 
-  // Render 3D Non-Striker
+  // Render 3D Realistic Non-Striker Partner with Human Face
   initNonStriker() {
-    this.nonStriker = new THREE.Group();
-    this.nonStriker.position.set(-0.4, 0, 9.2);
-
-    const jerseyMat = new THREE.MeshStandardMaterial({ color: 0x1E3A8A });
-    const skinMat = new THREE.MeshStandardMaterial({ color: 0xBA8B65 });
-
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.58, 0.24), jerseyMat);
-    body.position.y = 1.15;
-    body.castShadow = true;
-    this.nonStriker.add(body);
-
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 16), skinMat);
-    head.position.y = 1.6;
-    head.castShadow = true;
-    this.nonStriker.add(head);
-
-    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), new THREE.MeshStandardMaterial({ color: 0x0F172A }));
-    helmet.position.set(0, 1.63, -0.02);
-    this.nonStriker.add(helmet);
-
-    const bat = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.6, 0.04), new THREE.MeshStandardMaterial({ color: 0xDEB887 }));
-    bat.position.set(0.15, 0.3, 0);
-    this.nonStriker.add(bat);
-
-    this.nonStriker.rotation.y = Math.PI / 2.3;
+    this.nonStriker = AvatarFactory.createNonStrikerModel('Rohit Sharma', 0x1E3A8A);
     this.scene.add(this.nonStriker);
   }
 
@@ -336,6 +312,7 @@ export class Cricket3DEngine {
     this.scene.add(this.bowler);
   }
 
+  // Render Detailed Human Fielders across 9 real stadium positions
   initFielders() {
     const fielderPositions = [
       { x: -16, z: -4 },  // Cover
@@ -349,21 +326,9 @@ export class Cricket3DEngine {
       { x: 0, z: -11.5 }  // Wicket Keeper
     ];
 
-    const fielderMat = new THREE.MeshStandardMaterial({ color: 0x047857 });
-    const skinMat = new THREE.MeshStandardMaterial({ color: 0xC89E78 });
-
-    fielderPositions.forEach(p => {
-      const fGroup = new THREE.Group();
+    fielderPositions.forEach((p, idx) => {
+      const fGroup = AvatarFactory.createFielderModel(0x047857, idx);
       fGroup.position.set(p.x, 0, p.z);
-
-      const fBody = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.6, 0.2), fielderMat);
-      fBody.position.y = 1.1;
-      fGroup.add(fBody);
-
-      const fHead = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), skinMat);
-      fHead.position.y = 1.55;
-      fGroup.add(fHead);
-
       fGroup.lookAt(0, 1.2, -9);
       this.scene.add(fGroup);
       this.fielders.push({
@@ -387,20 +352,9 @@ export class Cricket3DEngine {
   }
 
   initBallTrail() {
-    const maxTrailPoints = 35;
-    const positions = new Float32Array(maxTrailPoints * 3);
-    const trailGeo = new THREE.BufferGeometry();
-    trailGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-    const trailMat = new THREE.LineBasicMaterial({
-      color: 0xF59E0B,
-      linewidth: 3,
-      transparent: true,
-      opacity: 0.85
-    });
-
-    this.trailLine = new THREE.Line(trailGeo, trailMat);
-    this.scene.add(this.trailLine);
+    // Ball direction strip removed for clean authentic cricket visual
+    this.trailPoints = [];
+    this.trailLine = null;
   }
 
   setCameraView(viewKey, smooth = true) {
@@ -597,14 +551,34 @@ export class Cricket3DEngine {
 
   // Called when player confirms or declines taking runs
   confirmRunningChoice(shouldRun, potentialRuns = 1) {
-    const runsAwarded = shouldRun ? potentialRuns : 0;
+    if (!shouldRun) {
+      this.onEvent({
+        type: 'partner_call',
+        message: 'NO RUN! Rohit: "Wait on! Solid stop, stay inside your crease!"'
+      });
+      this.onEvent({
+        type: 'shot_complete',
+        runs: 0,
+        shotType: this.currentShot || 'cover_drive',
+        timingScore: this.shotTimingScore
+      });
+      this.scheduleNextDelivery(1.8);
+      return;
+    }
+
+    // Active Running Sequence between wickets: Striker and Non-Striker sprint together!
+    this.isRunningBetweenWickets = true;
+    this.runningProgress = 0;
+    this.runningTotalRuns = potentialRuns;
+    this.currentRunIndex = 1;
+
+    audio.playCrowdCheer(0.6);
     this.onEvent({
-      type: 'shot_complete',
-      runs: runsAwarded,
-      shotType: this.currentShot || 'cover_drive',
-      timingScore: this.shotTimingScore
+      type: 'partner_call',
+      message: potentialRuns > 1
+        ? 'YES! TWO THERE! Rohit: "Turn blind, two on! Come on Virat!"'
+        : 'YES! RUN! Rohit: "Easy single, keep rotating the strike!"'
     });
-    this.scheduleNextDelivery(1.8);
   }
 
   triggerBowledDismissal() {
@@ -642,6 +616,55 @@ export class Cricket3DEngine {
       this.nextDeliveryCountdown -= delta;
       if (this.nextDeliveryCountdown <= 0) {
         this.startDelivery();
+      }
+    }
+
+    // Running Between Wickets Animation (Striker & Non-Striker sprinting across pitch)
+    if (this.isRunningBetweenWickets) {
+      this.runningProgress += delta * 1.6;
+      const t = Math.min(1.0, this.runningProgress);
+
+      const startZ = this.currentRunIndex % 2 === 1 ? -9.2 : 9.2;
+      const endZ = this.currentRunIndex % 2 === 1 ? 9.2 : -9.2;
+
+      if (this.batsman) {
+        this.batsman.position.z = THREE.MathUtils.lerp(startZ, endZ, t);
+        this.batsman.position.y = Math.abs(Math.sin(this.runningProgress * 14)) * 0.08;
+        this.batsman.rotation.y = endZ > startZ ? 0 : Math.PI;
+      }
+
+      if (this.nonStriker) {
+        this.nonStriker.position.z = THREE.MathUtils.lerp(endZ, startZ, t);
+        this.nonStriker.position.y = Math.abs(Math.cos(this.runningProgress * 14)) * 0.08;
+        this.nonStriker.rotation.y = endZ > startZ ? Math.PI : 0;
+      }
+
+      if (this.runningProgress >= 1.0) {
+        if (this.currentRunIndex < this.runningTotalRuns) {
+          this.currentRunIndex += 1;
+          this.runningProgress = 0;
+          audio.playBatHit('normal', 0.6);
+        } else {
+          this.isRunningBetweenWickets = false;
+          if (this.batsman) {
+            this.batsman.position.set(0.2, 0, -9.2);
+            this.batsman.rotation.y = -Math.PI / 2.3;
+            this.batsman.position.y = 0;
+          }
+          if (this.nonStriker) {
+            this.nonStriker.position.set(-0.4, 0, 9.2);
+            this.nonStriker.rotation.y = Math.PI / 2.3;
+            this.nonStriker.position.y = 0;
+          }
+
+          this.onEvent({
+            type: 'shot_complete',
+            runs: this.runningTotalRuns,
+            shotType: this.currentShot || 'cover_drive',
+            timingScore: this.shotTimingScore
+          });
+          this.scheduleNextDelivery(1.8);
+        }
       }
     }
 
@@ -825,22 +848,8 @@ export class Cricket3DEngine {
   }
 
   updateTrail(pos) {
-    if (!this.trailLine) return;
-    this.trailPoints.push(pos.clone());
-    if (this.trailPoints.length > 30) {
-      this.trailPoints.shift();
-    }
-
-    const posAttr = this.trailLine.geometry.attributes.position;
-    for (let i = 0; i < 30; i++) {
-      if (i < this.trailPoints.length) {
-        const p = this.trailPoints[i];
-        posAttr.setXYZ(i, p.x, p.y, p.z);
-      } else {
-        posAttr.setXYZ(i, pos.x, pos.y, pos.z);
-      }
-    }
-    posAttr.needsUpdate = true;
+    // Ball direction strip permanently removed for authentic realistic cricket delivery visual
+    return;
   }
 
   setupResizeListener() {

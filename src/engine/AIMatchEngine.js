@@ -168,6 +168,44 @@ export class AIMatchEngine {
     }
   }
 
+  // Situational Partner & AI Batter Intelligence (adapts to match state, RRR, wickets)
+  getPartnerSituationalInsight() {
+    const partner = this.getNonStriker();
+    if (!partner) return null;
+
+    const runsNeeded = Math.max(0, this.target - this.runs);
+    const ballsRemaining = Math.max(1, (this.totalOvers * 6) - this.balls);
+    const rrr = ((runsNeeded / ballsRemaining) * 6).toFixed(1);
+
+    let advice = "";
+    let posture = "BALANCED";
+
+    if (runsNeeded <= 0) {
+      advice = `${partner.name}: "WE WON! Iconic chase completed in style!"`;
+      posture = "VICTORY";
+    } else if (runsNeeded <= 12) {
+      advice = `${partner.name}: "Only ${runsNeeded} runs needed from ${ballsRemaining} balls. Simple strike rotation will seal it!"`;
+      posture = "CALM FINISH";
+    } else if (parseFloat(rrr) > 11.5) {
+      advice = `${partner.name}: "Required rate is ${rrr}! I'll target the boundary next over to support you!"`;
+      posture = "COUNTER ATTACK";
+    } else if (this.wickets >= 4) {
+      advice = `${partner.name}: "Crucial phase with ${this.wickets} down. Let's form a match-winning partnership!"`;
+      posture = "ANCHORING";
+    } else {
+      advice = `${partner.name}: "Superb control Virat. Let's take quick singles and keep the bowler guessing."`;
+      posture = "ROTATING STRIKE";
+    }
+
+    return {
+      name: partner.name,
+      posture,
+      advice,
+      runs: this.battingScorecard[partner.name]?.runs || 0,
+      balls: this.battingScorecard[partner.name]?.balls || 0
+    };
+  }
+
   // Simulate a single ball played by AI (when non-striker or opponent is batting)
   simulateAIBall() {
     if (this.isMatchOver()) return null;
@@ -179,39 +217,48 @@ export class AIMatchEngine {
     const strikerSkill = striker.skill;
     const bowlerSkill = bowler.skill;
 
-    // Captaincy modifiers
+    // Situational Adaptation for Partner
+    let effectiveIntent = this.teamIntent;
+    const runsNeeded = Math.max(0, this.target - this.runs);
+    const ballsRemaining = Math.max(1, (this.totalOvers * 6) - this.balls);
+    const rrr = (runsNeeded / ballsRemaining) * 6;
+
+    if (this.currentInnings === 2) {
+      if (rrr > 11.0) effectiveIntent = "aggressive";
+      else if (this.wickets >= 4 && runsNeeded > 35) effectiveIntent = "cautious";
+    }
+
+    // Captaincy & Skill modifiers
     let wicketProbability = 0.05 + (bowlerSkill - strikerSkill) * 0.002;
     if (this.fieldPreset === "aggressive") wicketProbability += 0.04;
     if (this.fieldPreset === "defensive") wicketProbability -= 0.02;
-    if (this.teamIntent === "aggressive") wicketProbability += 0.03;
+    if (effectiveIntent === "aggressive") wicketProbability += 0.03;
 
     // Outcome roll
     const roll = Math.random();
     let outcome = { runs: 0, isWicket: false, desc: "" };
 
     if (roll < wicketProbability) {
-      // Wicket
       outcome.isWicket = true;
       const dismissals = ["c & b", "caught at deep cover", "caught behind", "lbw", "bowled clean through the gate"];
       const chosen = dismissals[Math.floor(Math.random() * dismissals.length)];
       outcome.desc = `WICKET! ${striker.name} ${chosen} by ${bowler.name}!`;
     } else {
-      // Run probabilities based on intent
       let r = Math.random();
-      if (this.teamIntent === "aggressive") {
-        if (r < 0.28) outcome.runs = 0;
-        else if (r < 0.50) outcome.runs = 1;
+      if (effectiveIntent === "aggressive") {
+        if (r < 0.25) outcome.runs = 0;
+        else if (r < 0.48) outcome.runs = 1;
         else if (r < 0.65) outcome.runs = 2;
-        else if (r < 0.85) outcome.runs = 4;
+        else if (r < 0.84) outcome.runs = 4;
         else outcome.runs = 6;
-      } else if (this.teamIntent === "cautious") {
-        if (r < 0.45) outcome.runs = 0;
+      } else if (effectiveIntent === "cautious") {
+        if (r < 0.42) outcome.runs = 0;
         else if (r < 0.85) outcome.runs = 1;
         else if (r < 0.95) outcome.runs = 2;
         else outcome.runs = 4;
       } else {
         // Moderate
-        if (r < 0.35) outcome.runs = 0;
+        if (r < 0.32) outcome.runs = 0;
         else if (r < 0.68) outcome.runs = 1;
         else if (r < 0.82) outcome.runs = 2;
         else if (r < 0.94) outcome.runs = 4;
@@ -221,7 +268,7 @@ export class AIMatchEngine {
       if (outcome.runs === 6) outcome.desc = `SIX! ${striker.name} launches ${bowler.name} deep into the stands!`;
       else if (outcome.runs === 4) outcome.desc = `FOUR! Beautifully timed through the gap by ${striker.name}!`;
       else if (outcome.runs === 2) outcome.desc = `Good running, punched in the gap for a brace.`;
-      else if (outcome.runs === 1) outcome.desc = `Pushed into the covers for a quick single.`;
+      else if (outcome.runs === 1) outcome.desc = `Pushed into the covers for a quick single to rotate strike.`;
       else outcome.desc = `Dot ball! Solid defense from ${striker.name}.`;
     }
 
@@ -364,7 +411,8 @@ export class AIMatchEngine {
       commentary: this.commentary,
       isOver: this.isMatchOver(),
       battingScorecard: this.battingScorecard,
-      bowlingScorecard: this.bowlingScorecard
+      bowlingScorecard: this.bowlingScorecard,
+      partnerInsight: this.getPartnerSituationalInsight()
     };
   }
 }

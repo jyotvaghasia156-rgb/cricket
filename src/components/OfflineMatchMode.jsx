@@ -45,6 +45,8 @@ export const OfflineMatchMode = ({ onBackToMenu }) => {
   const [ballFlightProgress, setBallFlightProgress] = useState(null);
   const [ballZ, setBallZ] = useState(null);
   const [runningDecision, setRunningDecision] = useState(null);
+  const [partnerCallBanner, setPartnerCallBanner] = useState(null);
+  const [shotFeedback, setShotFeedback] = useState(null);
 
   const containerRef = useRef(null);
   const cricket3DRef = useRef(null);
@@ -129,6 +131,19 @@ export const OfflineMatchMode = ({ onBackToMenu }) => {
         possibleRuns: event.possibleRuns,
         shotType: event.shotType
       });
+    } else if (event.type === 'partner_call') {
+      setPartnerCallBanner(event.message);
+      setTimeout(() => setPartnerCallBanner(null), 3500);
+      engine.addCommentary(`🗣️ ${event.message}`);
+      refreshMatch();
+    } else if (event.type === 'bat_impact') {
+      setShotFeedback({
+        score: event.timingScore,
+        type: event.shotType,
+        isSix: event.isSix,
+        isFour: event.isFour
+      });
+      setTimeout(() => setShotFeedback(null), 2500);
     } else if (event.type === 'shot_complete') {
       setIsBallInPlay(false);
       setBallFlightProgress(null);
@@ -282,7 +297,7 @@ export const OfflineMatchMode = ({ onBackToMenu }) => {
           </button>
           <div>
             <div style={{ fontSize: 11, color: '#38BDF8', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              OFFLINE CRICKET MATCH • BROADCAST PRESENTATION
+              QUICK CRICKET MATCH • BROADCAST PRESENTATION
             </div>
             <div className="font-heading" style={{ fontSize: 18, fontWeight: 800, color: '#FFFFFF' }}>
               {TEAMS[userTeamId]?.name} vs {TEAMS[opponentTeamId]?.name} ({format.replace('_', ' ').toUpperCase()})
@@ -561,14 +576,64 @@ export const OfflineMatchMode = ({ onBackToMenu }) => {
                 </div>
               </div>
 
-              <div style={{ background: 'rgba(255, 255, 255, 0.05)', borderRadius: 8, padding: '6px 12px' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8' }}>NON-STRIKER (AI)</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#CBD5E1' }}>
-                  {matchState.nonStriker?.name} ({matchState.battingScorecard[matchState.nonStriker?.name]?.runs})
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(56, 189, 248, 0.25)',
+                borderRadius: 8,
+                padding: '6px 12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8' }}>PARTNER (NON-STRIKER)</div>
+                  {matchState.partnerInsight && (
+                    <span style={{
+                      fontSize: 9,
+                      fontWeight: 900,
+                      color: '#FCD34D',
+                      background: 'rgba(245, 158, 11, 0.2)',
+                      padding: '1px 6px',
+                      borderRadius: 4
+                    }}>
+                      {matchState.partnerInsight.posture}
+                    </span>
+                  )}
                 </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#CBD5E1' }}>
+                  {matchState.nonStriker?.name} ({matchState.battingScorecard[matchState.nonStriker?.name]?.runs} off {matchState.battingScorecard[matchState.nonStriker?.name]?.balls || 0}b)
+                </div>
+                {matchState.partnerInsight?.advice && (
+                  <div style={{ fontSize: 10, color: '#38BDF8', fontStyle: 'italic', maxWidth: 220, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    "{matchState.partnerInsight.advice}"
+                  </div>
+                )}
               </div>
             </div>
           </div>
+
+          {partnerCallBanner && (
+            <div style={{
+              position: 'absolute',
+              top: 145,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
+              border: '2px solid #38BDF8',
+              borderRadius: 30,
+              padding: '8px 24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              boxShadow: '0 0 30px rgba(56, 189, 248, 0.6)',
+              zIndex: 30
+            }}>
+              <span style={{ fontSize: 18 }}>🗣️</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#FCD34D', letterSpacing: '0.04em' }}>
+                {partnerCallBanner}
+              </span>
+            </div>
+          )}
 
           <div style={{
             position: 'absolute',
@@ -712,6 +777,7 @@ export const OfflineMatchMode = ({ onBackToMenu }) => {
                   setCameraView(cam);
                   if (cricket3DRef.current) cricket3DRef.current.setCameraView(cam, true);
                 }}
+                shotFeedback={shotFeedback}
                 ballFlightProgress={ballFlightProgress}
                 ballZ={ballZ}
                 runningDecision={runningDecision}

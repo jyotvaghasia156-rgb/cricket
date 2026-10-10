@@ -222,17 +222,49 @@ export const RealCricketControlsOverlay = ({
             {Math.round(shotFeedback.score * 100)}
           </div>
           <div style={{
+            display: 'flex',
+            gap: 8,
             marginTop: 8,
-            fontSize: 12,
-            fontWeight: 800,
-            textTransform: 'uppercase',
-            color: shotFeedback.score > 0.8 ? '#10B981' : (shotFeedback.score > 0.55 ? '#F59E0B' : '#EF4444'),
-            background: 'rgba(0,0,0,0.6)',
-            padding: '4px 10px',
-            borderRadius: 12,
-            border: `1px solid ${shotFeedback.score > 0.8 ? '#10B981' : (shotFeedback.score > 0.55 ? '#F59E0B' : '#EF4444')}`
+            alignItems: 'center'
           }}>
-            {shotFeedback.score > 0.8 ? 'PERFECT' : (shotFeedback.score > 0.55 ? 'GOOD' : 'POOR')}
+            <div style={{
+              fontSize: 11,
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              color: shotFeedback.score > 0.8 ? '#10B981' : (shotFeedback.score > 0.55 ? '#F59E0B' : '#EF4444'),
+              background: 'rgba(0,0,0,0.75)',
+              padding: '4px 10px',
+              borderRadius: 8,
+              border: `1px solid ${shotFeedback.score > 0.8 ? '#10B981' : (shotFeedback.score > 0.55 ? '#F59E0B' : '#EF4444')}`
+            }}>
+              {shotFeedback.score > 0.8 ? '★ SWEET SPOT' : (shotFeedback.score > 0.55 ? 'GOOD CONTACT' : 'MISTIMED')}
+            </div>
+
+            <div style={{
+              fontSize: 11,
+              fontWeight: 800,
+              color: '#38BDF8',
+              background: 'rgba(8, 14, 28, 0.85)',
+              padding: '4px 10px',
+              borderRadius: 8,
+              border: '1px solid rgba(56, 189, 248, 0.4)'
+            }}>
+              ⚡ {Math.round(112 + shotFeedback.score * 42)} KM/H
+            </div>
+
+            {shotFeedback.isSix && (
+              <div style={{
+                fontSize: 11,
+                fontWeight: 900,
+                color: '#FCD34D',
+                background: 'rgba(245, 158, 11, 0.25)',
+                padding: '4px 10px',
+                borderRadius: 8,
+                border: '1px solid #F59E0B'
+              }}>
+                🔥 {Math.round(78 + shotFeedback.score * 34)}m SIX
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -347,10 +379,12 @@ export const RealCricketControlsOverlay = ({
                   <div><kbd style={{ background: '#10B981', color: '#0F172A', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>Z</kbd> : Front Foot Stance</div>
                   <div><kbd style={{ background: '#10B981', color: '#0F172A', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>X</kbd> : Back Foot Stance</div>
                   <div><kbd style={{ background: '#10B981', color: '#0F172A', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>A</kbd> : Step Out / Advance Pitch</div>
-                  <div><kbd style={{ background: '#10B981', color: '#0F172A', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>H / ?</kbd> : Toggle Controls Help Guide</div>
-                </div>
-              </div>
             </div>
+          </div>
+        </div>
+      </div>
+      </div>
+      )}
 
       {/* RUNNING DECISION CALL BANNER: Choice to run or stay */}
       {runningDecision && (
@@ -815,6 +849,7 @@ export const RealCricketControlsOverlay = ({
         </div>
       </div>
     </div>
-  </>
-);
+    </>
+  );
 };
+
