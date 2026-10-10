@@ -242,9 +242,9 @@ export const StoryMode = ({ onBackToMenu }) => {
     });
   };
 
-  const handlePlayShot = (shotType, timing) => {
+  const handlePlayShot = (shotType, timing, options = {}) => {
     if (!engineRef.current) return;
-    engineRef.current.playShot(shotType, timing);
+    engineRef.current.playShot(shotType, timing, options);
   };
 
   const handleChangeCamera = (cam) => {

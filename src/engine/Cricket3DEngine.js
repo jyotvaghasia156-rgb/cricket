@@ -470,6 +470,7 @@ export class Cricket3DEngine {
   playShot(shotType, timingScore = 1.0, options = {}) {
     this.currentShot = shotType;
     this.shotTimingScore = timingScore;
+    this.currentShotOptions = options;
     this.batSwingProgress = 0;
     this.shotActiveTimer = 0.65;
     this.footworkMode = options.footwork || 'front_foot';
@@ -485,11 +486,11 @@ export class Cricket3DEngine {
     }
 
     if (this.ballState === 'bowled' && this.ballPos.z < -4.5 && this.ballPos.z > -10.0 && !this.hasHitBall) {
-      this.executeBatContact(shotType, timingScore);
+      this.executeBatContact(shotType, timingScore, options);
     }
   }
 
-  executeBatContact(shotType, timingScore) {
+  executeBatContact(shotType, timingScore, options = (this.currentShotOptions || {})) {
     if (this.hasHitBall) return;
     this.hasHitBall = true;
     this.ballState = 'hit';
@@ -498,48 +499,54 @@ export class Cricket3DEngine {
     const accuracy = Math.max(0.3, 1.0 - (distFromSweetSpot / 3.0));
     const finalScore = (timingScore * 0.5) + (accuracy * 0.5);
 
-    const isSix = (shotType === 'lofted_six' && finalScore > 0.55);
+    // Determine if shot is lofted (aerial boundary clearing) or along the ground
+    const isLoftRequested = (options && options.isLofted !== undefined) ? options.isLofted : (shotType === 'lofted_six');
+    const isSix = (isLoftRequested && finalScore > 0.52 && shotType !== 'defend');
     audio.playBatHit(isSix ? 'six' : 'normal', finalScore);
 
     let exitSpeed = 34 * finalScore;
-    let launchAngleY = 0.15;
+    let launchAngleY = isLoftRequested ? (0.45 + (finalScore * 0.25)) : (0.04 + (Math.random() * 0.05)); // Ground shots stay hugging the turf!
     let targetDirX = 0;
     let targetDirZ = 1;
 
     switch (shotType) {
       case 'cover_drive':
-        targetDirX = -1.3;
-        targetDirZ = 1.2;
-        launchAngleY = 0.12;
+        targetDirX = -1.35;
+        targetDirZ = 1.15;
+        if (!isLoftRequested) launchAngleY = 0.04;
         break;
       case 'straight_drive':
         targetDirX = 0.05;
-        targetDirZ = 2.0;
-        launchAngleY = 0.18;
+        targetDirZ = 2.1;
+        if (!isLoftRequested) launchAngleY = 0.05;
         break;
       case 'pull':
-        targetDirX = 1.4;
-        targetDirZ = 0.8;
-        launchAngleY = 0.35;
+        targetDirX = 1.45;
+        targetDirZ = 0.75;
+        if (!isLoftRequested) launchAngleY = 0.06;
         break;
       case 'flick':
-        targetDirX = 1.0;
-        targetDirZ = 1.3;
-        launchAngleY = 0.22;
+        targetDirX = 1.05;
+        targetDirZ = 1.25;
+        if (!isLoftRequested) launchAngleY = 0.05;
         break;
       case 'lofted_six':
-        targetDirX = -0.2;
+        targetDirX = -0.15;
         targetDirZ = 2.2;
-        launchAngleY = 0.65;
-        exitSpeed = 46 * Math.max(0.65, finalScore);
+        launchAngleY = 0.68;
+        exitSpeed = 48 * Math.max(0.65, finalScore);
         break;
       case 'defend':
       default:
-        targetDirX = 0.3;
-        targetDirZ = 0.4;
-        launchAngleY = 0.05;
-        exitSpeed = 9;
+        targetDirX = 0.25;
+        targetDirZ = 0.35;
+        launchAngleY = 0.02;
+        exitSpeed = 8;
         break;
+    }
+
+    if (isLoftRequested && shotType !== 'defend') {
+      exitSpeed *= 1.22; // Lofted shots travel faster and further
     }
 
     const dir = new THREE.Vector3(targetDirX, launchAngleY, targetDirZ).normalize();
@@ -662,7 +669,7 @@ export class Cricket3DEngine {
       this.updateTrail(this.ballPos);
 
       if (this.shotActiveTimer > 0 && !this.hasHitBall && this.ballPos.z < -5.5 && this.ballPos.z > -9.8) {
-        this.executeBatContact(this.currentShot || 'cover_drive', this.shotTimingScore);
+        this.executeBatContact(this.currentShot || 'cover_drive', this.shotTimingScore, this.currentShotOptions);
       }
 
       if (this.ballPos.z <= -10.0 && !this.hasHitBall) {

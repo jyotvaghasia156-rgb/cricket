@@ -173,9 +173,9 @@ export const OfflineMatchMode = ({ onBackToMenu }) => {
     });
   };
 
-  const handlePlayShot = (shotType, timing) => {
+  const handlePlayShot = (shotType, timing, options = {}) => {
     if (!cricket3DRef.current) return;
-    cricket3DRef.current.playShot(shotType, timing);
+    cricket3DRef.current.playShot(shotType, timing, options);
   };
 
   const handleSimulateNextBall = () => {

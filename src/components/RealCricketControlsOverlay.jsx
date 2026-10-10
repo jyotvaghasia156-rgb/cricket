@@ -86,8 +86,20 @@ export const RealCricketControlsOverlay = ({ onPlayShot, isBallInPlay, cameraVie
       } else if (e.key === '6' || e.key === 'd' || e.key === 'D') {
         setSelectedDirection('defend');
         handleExecuteShot('defend');
-      } else if (e.key === 'l' || e.key === 'L') {
-        setIsLofted(prev => !prev);
+      } else if (e.key === 'l' || e.key === 'L' || e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+        setIsLofted(true);
+        audio.playClick();
+      } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S' || e.key === 'g' || e.key === 'G') {
+        setIsLofted(false);
+        audio.playClick();
+      } else if (e.key === 'ArrowLeft') {
+        setSelectedDirection('cover_drive');
+        audio.playClick();
+      } else if (e.key === 'ArrowRight') {
+        setSelectedDirection('pull');
+        audio.playClick();
+      } else if (e.key === 'Enter') {
+        handleExecuteShot();
       } else if (e.key === 'z' || e.key === 'Z') {
         setFootwork('front_foot');
       } else if (e.key === 'x' || e.key === 'X') {
@@ -497,104 +509,198 @@ export const RealCricketControlsOverlay = ({ onPlayShot, isBallInPlay, cameraVie
           ))}
         </div>
 
-        {/* Right Side: Real Cricket Toggles & Big STRIKE Trigger Button */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-          {/* Loft vs Ground Push Toggle */}
-          <div style={{ display: 'flex', gap: 6, background: 'rgba(10, 16, 32, 0.88)', padding: 4, borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)' }}>
-            <button
-              onClick={() => {
-                audio.playClick();
-                setIsLofted(false);
-              }}
-              style={{
-                padding: '6px 12px',
-                fontSize: 11,
-                fontWeight: 800,
-                borderRadius: 6,
-                background: !isLofted ? '#0284C7' : 'transparent',
-                border: 'none',
-                color: !isLofted ? '#FFFFFF' : '#94A3B8',
-                cursor: 'pointer'
-              }}
-            >
-              GROUND PUSH
-            </button>
-            <button
-              onClick={() => {
-                audio.playClick();
-                setIsLofted(true);
-              }}
-              style={{
-                padding: '6px 12px',
-                fontSize: 11,
-                fontWeight: 800,
-                borderRadius: 6,
-                background: isLofted ? 'linear-gradient(135deg, #DC2626 0%, #EA580C 100%)' : 'transparent',
-                border: 'none',
-                color: isLofted ? '#FFFFFF' : '#94A3B8',
-                cursor: 'pointer',
-                boxShadow: isLofted ? '0 0 12px rgba(220,38,38,0.5)' : 'none'
-              }}
-            >
-              🔥 HIGH LOFT
-            </button>
-          </div>
+        {/* Right Side: Pro Cricket Batting Controls (Vertical Axis Loft + Footwork + Big STRIKE) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          {/* Vertical Axis Elevation Slider: Authentic Real Cricket / WCC Dual Pillar */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            background: 'rgba(8, 14, 28, 0.92)',
+            backdropFilter: 'blur(16px)',
+            padding: '6px 5px',
+            borderRadius: 16,
+            border: '2px solid rgba(56, 189, 248, 0.35)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+            width: 72
+          }}>
+            <div style={{
+              fontSize: 8,
+              fontWeight: 900,
+              color: '#38BDF8',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              marginBottom: 4
+            }}>
+              ELEVATION
+            </div>
 
-          {/* Footwork Toggle */}
-          <div style={{ display: 'flex', gap: 4, background: 'rgba(10, 16, 32, 0.88)', padding: 4, borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)' }}>
-            {[
-              { id: 'front_foot', label: 'FRONT FOOT' },
-              { id: 'back_foot', label: 'BACK FOOT' },
-              { id: 'advance', label: 'STEP OUT' }
-            ].map(fw => (
+            {/* Vertical Toggle Track */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+              width: '100%',
+              background: 'rgba(15, 23, 42, 0.85)',
+              borderRadius: 12,
+              padding: 3
+            }}>
+              {/* LOFT (UPPER AXIS) */}
               <button
-                key={fw.id}
                 onClick={() => {
                   audio.playClick();
-                  setFootwork(fw.id);
+                  setIsLofted(true);
                 }}
+                title="Aerial Boundary Shot (W / ↑ / L)"
                 style={{
-                  padding: '4px 8px',
-                  fontSize: 10,
-                  fontWeight: 800,
-                  borderRadius: 6,
-                  background: footwork === fw.id ? '#F59E0B' : 'transparent',
-                  border: 'none',
-                  color: footwork === fw.id ? '#0F172A' : '#94A3B8',
-                  cursor: 'pointer'
+                  height: 48,
+                  width: '100%',
+                  borderRadius: 9,
+                  background: isLofted
+                    ? 'linear-gradient(180deg, #EF4444 0%, #DC2626 100%)'
+                    : 'transparent',
+                  border: isLofted ? '1px solid #FCA5A5' : '1px solid transparent',
+                  color: isLofted ? '#FFFFFF' : '#64748B',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: isLofted ? '0 0 16px rgba(239, 68, 68, 0.65)' : 'none',
+                  transition: 'all 0.18s ease'
                 }}
               >
-                {fw.label}
+                <Flame size={16} color={isLofted ? '#FFF' : '#64748B'} />
+                <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.04em' }}>LOFT</span>
               </button>
-            ))}
+
+              {/* Slider Divider Indicator */}
+              <div style={{
+                height: 2,
+                margin: '1px 6px',
+                background: 'rgba(255, 255, 255, 0.12)',
+                borderRadius: 1
+              }} />
+
+              {/* GROUND (LOWER AXIS) */}
+              <button
+                onClick={() => {
+                  audio.playClick();
+                  setIsLofted(false);
+                }}
+                title="Ground Drive / Safe Placement (S / ↓ / G)"
+                style={{
+                  height: 48,
+                  width: '100%',
+                  borderRadius: 9,
+                  background: !isLofted
+                    ? 'linear-gradient(180deg, #0284C7 0%, #0369A1 100%)'
+                    : 'transparent',
+                  border: !isLofted ? '1px solid #7DD3FC' : '1px solid transparent',
+                  color: !isLofted ? '#FFFFFF' : '#64748B',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: !isLofted ? '0 0 16px rgba(2, 132, 199, 0.65)' : 'none',
+                  transition: 'all 0.18s ease'
+                }}
+              >
+                <Shield size={15} color={!isLofted ? '#FFF' : '#64748B'} />
+                <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.04em' }}>GROUND</span>
+              </button>
+            </div>
+            
+            <span style={{ fontSize: 7, fontWeight: 700, color: '#94A3B8', marginTop: 3 }}>
+              [W / S]
+            </span>
           </div>
 
-          {/* BIG STRIKE TRIGGER BUTTON */}
-          <button
-            onClick={() => handleExecuteShot()}
-            style={{
-              width: 130,
-              height: 52,
-              borderRadius: 14,
-              background: activeShotFlash
-                ? '#10B981'
-                : 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-              border: '2px solid #FCD34D',
-              color: '#0F172A',
-              fontFamily: 'Outfit',
-              fontSize: 16,
-              fontWeight: 900,
-              cursor: 'pointer',
-              boxShadow: '0 0 25px rgba(245, 158, 11, 0.6)',
-              transform: activeShotFlash ? 'scale(1.08)' : 'scale(1)',
-              transition: 'all 0.15s ease',
+          {/* Right Action Column: Footwork Pill + Grand STRIKE Trigger Button */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+            {/* Footwork Selector */}
+            <div style={{
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6
-            }}
-          >
-          </button>
+              gap: 4,
+              background: 'rgba(8, 14, 28, 0.92)',
+              backdropFilter: 'blur(12px)',
+              padding: '4px 6px',
+              borderRadius: 10,
+              border: '1px solid rgba(56, 189, 248, 0.3)'
+            }}>
+              {[
+                { id: 'front_foot', label: 'FRONT FOOT', key: 'Z' },
+                { id: 'back_foot', label: 'BACK FOOT', key: 'X' },
+                { id: 'advance', label: 'STEP OUT', key: 'A' }
+              ].map(fw => (
+                <button
+                  key={fw.id}
+                  onClick={() => {
+                    audio.playClick();
+                    setFootwork(fw.id);
+                  }}
+                  style={{
+                    padding: '5px 9px',
+                    fontSize: 9,
+                    fontWeight: 900,
+                    borderRadius: 6,
+                    background: footwork === fw.id
+                      ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
+                      : 'rgba(15, 23, 42, 0.6)',
+                    border: footwork === fw.id ? '1px solid #FCD34D' : '1px solid transparent',
+                    color: footwork === fw.id ? '#0F172A' : '#94A3B8',
+                    cursor: 'pointer',
+                    boxShadow: footwork === fw.id ? '0 0 10px rgba(245, 158, 11, 0.5)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {fw.label}
+                </button>
+              ))}
+            </div>
+
+            {/* BIG ACTION STRIKE TRIGGER BUTTON */}
+            <button
+              onClick={() => handleExecuteShot()}
+              style={{
+                width: 140,
+                height: 58,
+                borderRadius: 16,
+                background: activeShotFlash
+                  ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                  : isLofted
+                    ? 'linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)'
+                    : 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
+                border: activeShotFlash
+                  ? '2px solid #34D399'
+                  : isLofted
+                    ? '2px solid #FCD34D'
+                    : '2px solid #7DD3FC',
+                color: activeShotFlash ? '#FFFFFF' : (isLofted ? '#0F172A' : '#FFFFFF'),
+                fontFamily: 'Rajdhani',
+                fontSize: 19,
+                fontWeight: 900,
+                letterSpacing: '0.06em',
+                cursor: 'pointer',
+                boxShadow: activeShotFlash
+                  ? '0 0 35px #10B981'
+                  : isLofted
+                    ? '0 0 25px rgba(245, 158, 11, 0.65)'
+                    : '0 0 25px rgba(2, 132, 199, 0.65)',
+                transform: activeShotFlash ? 'scale(1.08)' : 'scale(1)',
+                transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                textTransform: 'uppercase'
+              }}
+            >
+              <Zap size={22} fill={activeShotFlash ? '#FFF' : (isLofted ? '#0F172A' : '#FFF')} />
+              <span>STRIKE</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
