@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23DC2626'/><path d='M20 50 Q50 30 80 50' stroke='%23FFFFFF' stroke-width='4' fill='none' stroke-dasharray='4,4'/><path d='M20 50 Q50 70 80 50' stroke='%23FFFFFF' stroke-width='4' fill='none' stroke-dasharray='4,4'/></svg>" />
     <style>
       * {
         box-sizing: border-box;
@@ -30,10 +31,29 @@
         display: flex;
         position: relative;
       }
+      @keyframes spinGlow {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes pulseText {
+        0%, 100% { opacity: 0.7; }
+        50% { opacity: 1; }
+      }
     </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Instant Branded Preloader (Replaced automatically when React mounts) -->
+      <div style="width:100%;height:100%;background:radial-gradient(circle at 50% 50%, #0F172A 0%, #040814 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#FFFFFF;text-align:center;padding:24px;">
+        <div style="font-size:12px;font-weight:800;letter-spacing:0.25em;color:#F59E0B;text-transform:uppercase;margin-bottom:12px;">★ EA / 2K STYLE CRICKET CHRONICLES ★</div>
+        <div style="font-size:clamp(32px, 6vw, 64px);font-weight:900;letter-spacing:-0.02em;text-transform:uppercase;line-height:1;margin-bottom:8px;">CHASE MASTER</div>
+        <div style="font-size:clamp(20px, 4vw, 36px);font-weight:900;letter-spacing:0.04em;background:linear-gradient(135deg, #F59E0B, #FCD34D, #FFFFFF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-transform:uppercase;margin-bottom:32px;">KING KOHLI 18</div>
+        <div style="width:48px;height:48px;border:3px solid rgba(56, 189, 248, 0.2);border-top:3px solid #38BDF8;border-radius:50%;animation:spinGlow 0.9s linear infinite;box-shadow:0 0 20px rgba(56, 189, 248, 0.4);margin-bottom:20px;"></div>
+        <div style="font-size:14px;font-weight:700;letter-spacing:0.15em;color:#38BDF8;text-transform:uppercase;animation:pulseText 1.5s ease-in-out infinite;">Loading 3D Cricket Arena & Assets...</div>
+        <div style="font-size:12px;color:#64748B;margin-top:8px;">Preparing authentic physics & stadium lighting</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
+

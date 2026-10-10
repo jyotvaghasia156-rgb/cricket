@@ -6,8 +6,9 @@ export class Cricket3DEngine {
   constructor(containerElement, onEventCallback) {
     this.container = containerElement;
     this.onEvent = onEventCallback || (() => {});
-    this.width = containerElement.clientWidth;
-    this.height = containerElement.clientHeight;
+    this.width = (containerElement && containerElement.clientWidth > 0) ? containerElement.clientWidth : (window.innerWidth || 1280);
+    this.height = (containerElement && containerElement.clientHeight > 0) ? containerElement.clientHeight : (window.innerHeight || 720);
+
 
     this.scene = null;
     this.camera = null;
@@ -80,7 +81,9 @@ export class Cricket3DEngine {
     this.scene.background = new THREE.Color(0x060B18);
     this.scene.fog = new THREE.FogExp2(0x070E22, 0.007);
 
-    this.camera = new THREE.PerspectiveCamera(54, this.width / this.height, 0.1, 400);
+    const aspect = (this.width > 0 && this.height > 0) ? (this.width / this.height) : (16 / 9);
+    this.camera = new THREE.PerspectiveCamera(54, aspect, 0.1, 400);
+
     this.setCameraView('helmet_cam', false);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });

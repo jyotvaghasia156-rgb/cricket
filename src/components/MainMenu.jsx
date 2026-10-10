@@ -27,20 +27,31 @@ export const MainMenu = ({ onSelectMode }) => {
   const containerRef = useRef(null);
   const sceneRef = useRef(null);
 
-  // Initialize 3D Background Scene
+  // Initialize 3D Background Scene with fail-safe fallback
   useEffect(() => {
     if (containerRef.current) {
-      sceneRef.current = new Menu3DScene(containerRef.current);
-      sceneRef.current.setEra(selectedEra);
+      try {
+        sceneRef.current = new Menu3DScene(containerRef.current);
+        if (sceneRef.current) {
+          sceneRef.current.setEra(selectedEra);
+        }
+      } catch (err) {
+        console.warn('Could not initialize 3D menu background scene (WebGL fallback active):', err);
+      }
     }
 
     return () => {
       if (sceneRef.current) {
-        sceneRef.current.destroy();
+        try {
+          sceneRef.current.destroy();
+        } catch (e) {
+          console.warn('Error destroying 3D menu scene:', e);
+        }
         sceneRef.current = null;
       }
     };
   }, []);
+
 
   // Update era jersey on 3D model
   const handleEraChange = (eraKey) => {

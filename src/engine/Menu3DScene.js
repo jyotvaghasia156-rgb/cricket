@@ -4,21 +4,27 @@ import { AvatarFactory } from './AvatarFactory';
 export class Menu3DScene {
   constructor(containerElement) {
     this.container = containerElement;
-    this.width = containerElement.clientWidth;
-    this.height = containerElement.clientHeight;
+    this.width = (containerElement && containerElement.clientWidth > 0) ? containerElement.clientWidth : (window.innerWidth || 1920);
+    this.height = (containerElement && containerElement.clientHeight > 0) ? containerElement.clientHeight : (window.innerHeight || 1080);
 
     this.scene = null;
     this.camera = null;
     this.renderer = null;
     this.animationFrameId = null;
+    this.isFallback = false;
 
     this.batsman = null;
     this.eraKey = 'prime';
     this.orbitAngle = 0;
 
-    this.init();
-    this.setupResize();
-    this.animate();
+    try {
+      this.init();
+      this.setupResize();
+      this.animate();
+    } catch (err) {
+      console.warn('Menu3DScene initialization fell back to static background:', err);
+      this.isFallback = true;
+    }
   }
 
   init() {
@@ -26,13 +32,14 @@ export class Menu3DScene {
     this.scene.background = new THREE.Color(0x040814);
     this.scene.fog = new THREE.FogExp2(0x060D20, 0.015);
 
-    this.camera = new THREE.PerspectiveCamera(45, this.width / this.height, 0.1, 300);
+    const aspect = (this.width > 0 && this.height > 0) ? (this.width / this.height) : (16 / 9);
+    this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 300);
     this.camera.position.set(0, 2.2, 5.5);
     this.camera.lookAt(0, 1.2, 0);
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'default' });
     this.renderer.setSize(this.width, this.height);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -43,6 +50,7 @@ export class Menu3DScene {
 
     // Dynamic Lighting
     const ambientLight = new THREE.AmbientLight(0x2A3B5C, 1.2);
+
     this.scene.add(ambientLight);
 
     // Golden Rim light (hero backlight)
@@ -182,12 +190,15 @@ export class Menu3DScene {
   }
 
   animate = () => {
+    if (this.isFallback || !this.renderer || !this.scene || !this.camera) return;
+
     this.animationFrameId = requestAnimationFrame(this.animate);
 
     // Cinematic slow orbit around Virat Kohli
     this.orbitAngle += 0.0035;
     const radius = 5.2;
     this.camera.position.x = Math.sin(this.orbitAngle) * 2.2;
+
     this.camera.position.z = radius + Math.cos(this.orbitAngle) * 0.6;
     this.camera.position.y = 1.9 + Math.sin(this.orbitAngle * 1.5) * 0.2;
     this.camera.lookAt(0, 1.25, 0);

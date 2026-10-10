@@ -35,3 +35,5 @@ VERSION
 scripts/search_repo*
 scripts/setup_search*
 scripts/validate-*
+
+.vercel
